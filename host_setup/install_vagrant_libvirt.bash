@@ -6,7 +6,7 @@ set -e
 # Enable/disable debugging
 #set -x
 
-echo "##### Hypervisor setup #####"
+echo "[INFO] ##### Hypervisor setup #####"
 
 # Install hypervisor
 yum -y install qemu qemu-kvm qemu-kvm-tools qemu-img libvirt libvirt-daemon-kvm libvirt-client
@@ -20,7 +20,7 @@ systemctl status libvirtd.service
 # environment in case something goes wrong.
 virsh capabilities
 
-echo "##### Vagrant setup #####"
+echo "[INFO] ##### Vagrant setup #####"
 
 # Install vagrant from vagrantup.com rather than SCL as the scripts from GCS
 # repo cannot be modified
@@ -72,7 +72,7 @@ yum -y install perl-Digest-SHA # For /usr/bin/shasum
 shasum -a 256 -c vagrant_2.2.1_SHA256SUMS | grep -F "${VAGRANT_PKG_FILE}: OK"
 yum -y localinstall "$VAGRANT_PKG_FILE"
 
-echo "##### vagrant-libvirt setup #####"
+echo "[INFO] ##### vagrant-libvirt setup #####"
 # https://github.com/vagrant-libvirt/vagrant-libvirt
 yum -y install libvirt-devel ruby-devel gcc \
   libxslt-devel libxml2-devel libguestfs-tools-c
@@ -81,6 +81,6 @@ vagrant plugin install vagrant-libvirt
 # Log the available vagrant plugins
 vagrant plugin list
 
-echo "##### Importing centos/7 box #####"
+echo "[INFO] ##### Importing centos/7 box #####"
 # Import the vagrant box
 vagrant box add --provider libvirt --force centos/7
