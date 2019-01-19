@@ -1,6 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+require 'yaml'
+
 # IMPORTANT: It is assumed that this file is used from the git checkout
 # without modifying the directory structure. This isn't a good idea for
 # production setups, but this is a development setup, so..
@@ -9,12 +11,7 @@ CONFIG_DIR = WORKING_DIR + 'conf/'
 PROVISIONING_DIR_NAME = 'vm_provisioning/'
 PROVISIONING_DIR = WORKING_DIR + PROVISIONING_DIR_NAME
 
-MAC_ADDRESSES = {
-  master: "52:54:00:a3:25:0a",
-  node1:  "52:54:00:94:be:0b",
-  node2:  "52:54:00:37:8c:dd",
-  node3:  "52:54:00:2d:f1:71",
-}
+MAC_ADDRESSES = YAML.load_file(CONFIG_DIR + 'mac.yml')
 HOST_BRIDGE_DEV = "gcsbr0"
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
@@ -49,7 +46,7 @@ Vagrant.configure("2") do |config|
     master.vm.network "public_network",
       dev:  HOST_BRIDGE_DEV,
       type: "bridge",
-      mac:  MAC_ADDRESSES[:master],
+      mac:  MAC_ADDRESSES['master'],
       ip:   "192.168.150.11"
 
     # Vagrant documentation isn't fully clear on what exactly is done when
@@ -72,7 +69,7 @@ Vagrant.configure("2") do |config|
       node.vm.network "public_network",
         dev:  HOST_BRIDGE_DEV,
         type: "bridge",
-        mac:  MAC_ADDRESSES["node#{i}".to_sym],
+        mac:  MAC_ADDRESSES["node#{i}"],
         ip:   "192.168.150.2#{i}"
 
       node.vm.provision "Set node#{i} hostname", type: "shell", inline: <<-HOSTNAME
