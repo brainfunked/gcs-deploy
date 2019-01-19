@@ -69,7 +69,7 @@ curl -Os "https://releases.hashicorp.com/vagrant/${VAGRANT_VERSION}/${VAGRANT_PK
 curl -Os "https://releases.hashicorp.com/vagrant/${VAGRANT_VERSION}/${VAGRANT_PKG_SIG_FILE}"
 gpg --verify "$VAGRANT_PKG_SIG_FILE" "$VAGRANT_PKG_SHASUM_FILE"
 yum -y install perl-Digest-SHA # For /usr/bin/shasum
-shasum -a 256 -c vagrant_2.2.1_SHA256SUMS | grep -F "${VAGRANT_PKG_FILE}: OK"
+shasum -a 256 -c "${VAGRANT_PKG_SHASUM_FILE}" | grep -F "${VAGRANT_PKG_FILE}: OK"
 yum -y localinstall "$VAGRANT_PKG_FILE"
 
 echo "[INFO] ##### vagrant-libvirt setup #####"

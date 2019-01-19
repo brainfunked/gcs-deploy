@@ -57,8 +57,6 @@ else
   exit 254
 fi
 
-echo "[INFO] # Setting up virtual networking for GCS VMs."
-
 echo "[INFO] ## Installing dependencies."
 yum -y install "${PACKAGES[@]}"
 echo "[DEBUG] ## Installed packages: ${PACKAGES[*]}"
@@ -77,6 +75,9 @@ then
   echo "[ERROR] Unsatisfied dependencies for executables: ${MISSING_DEPS[*]}"
   exit 253
 fi
+echo "[INFO] ## Dependencies verified."
+
+echo "[INFO] # Setting up virtual networking for GCS VMs."
 
 echo "[INFO] ## Setting up bridge gcsbr0"
 BRIDGE_UUID=$(uuidgen)
@@ -136,7 +137,7 @@ do
   then
     DNS_FAILED["$fqdn"]="$ip"
   fi
-done
+done < host_setup/hosts
 
 # $DNS_ENABLED should be empty if all FQDNs resolved correctly
 if ! [[ ${#DNS_FAILED[@]} -eq 0 ]]
