@@ -9,6 +9,13 @@ CONFIG_DIR = WORKING_DIR + 'conf/'
 PROVISIONING_DIR_NAME = 'vm_provisioning/'
 PROVISIONING_DIR = WORKING_DIR + PROVISIONING_DIR_NAME
 
+MAC_ADDRESSES = {
+  master: "52:54:00:a3:25:0a",
+  node1:  "52:54:00:94:be:0b",
+  node2:  "52:54:00:37:8c:dd",
+  node3:  "52:54:00:2d:f1:71",
+}
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -39,17 +46,38 @@ Vagrant.configure("2") do |config|
     # doesn't allow much configurability and basically didn't work at all when
     # manually configured.
     master.vm.network "public_network",
-      dev: "gcsbr0",
+      dev:  "gcsbr0",
       type: "bridge",
-      mac: "52:54:00:a3:25:0a",
-      ip: "192.168.150.11"
+      mac:  MAC_ADDRESSES[:master],
+      ip:   "192.168.150.11"
 
     # Vagrant documentation isn't fully clear on what exactly is done when
     # vagrant is set to manage the hostname. This option is thus better.
     # /etc/hosts file is setup for all VMs with a common provisioner later.
-    master.vm.provision "Set hostname", type: "shell", inline: <<-HOSTNAME
+    master.vm.provision "Set master hostname", type: "shell", inline: <<-HOSTNAME
       hostnamectl set-hostname master
     HOSTNAME
+  end
+
+  (1..3).each do |i|
+    config.vm.define "node#{i}" do |node|
+      node.vm.provider :libvirt do |lv|
+        lv.default_prefix = "gcs"
+        lv.cpus = 2
+        lv.memory = 2048
+        lv.nested = true
+      end
+
+      node.vm.network "public_network",
+        dev:  "gcsbr0",
+        type: "bridge",
+        mac:  MAC_ADDRESSES["node#{i}".to_sym],
+        ip:   "192.168.150.2#{i}"
+
+      node.vm.provision "Set node#{i} hostname", type: "shell", inline: <<-HOSTNAME
+        hostnamectl set-hostname node#{i}
+      HOSTNAME
+    end
   end
 
   # Add cluster hosts' IPs to /etc/hosts
