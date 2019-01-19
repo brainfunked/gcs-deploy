@@ -15,6 +15,7 @@ MAC_ADDRESSES = {
   node2:  "52:54:00:37:8c:dd",
   node3:  "52:54:00:2d:f1:71",
 }
+HOST_BRIDGE_DEV = "gcsbr0"
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -46,7 +47,7 @@ Vagrant.configure("2") do |config|
     # doesn't allow much configurability and basically didn't work at all when
     # manually configured.
     master.vm.network "public_network",
-      dev:  "gcsbr0",
+      dev:  HOST_BRIDGE_DEV,
       type: "bridge",
       mac:  MAC_ADDRESSES[:master],
       ip:   "192.168.150.11"
@@ -69,7 +70,7 @@ Vagrant.configure("2") do |config|
       end
 
       node.vm.network "public_network",
-        dev:  "gcsbr0",
+        dev:  HOST_BRIDGE_DEV,
         type: "bridge",
         mac:  MAC_ADDRESSES["node#{i}".to_sym],
         ip:   "192.168.150.2#{i}"
