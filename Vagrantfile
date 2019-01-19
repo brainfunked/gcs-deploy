@@ -149,13 +149,15 @@ Vagrant.configure("2") do |config|
   SELINUX
 
   # Copy over the scripts for deploying kubernetes
+  # TODO: Use the synced folder instead
   config.vm.provision "Copy provisioning directory", type: "file",
     source: PROVISIONING_DIR,
     destination: "$HOME/"
 
   # The provisioners hereon are to be manually invoked after a `vagrant reload`
   config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
-    pushd "$HOME/#{PROVISIONING_DIR_NAME}"
-    ./install_kubeadm.bash
+    cp "/home/vagrant/#{PROVISIONING_DIR_NAME}install_kubeadm.bash" /usr/local/sbin
+    chmod +x /usr/local/sbin/install_kubeadm.bash
+    /usr/local/sbin/install_kubeadm.bash
   KUBEADM
 end
