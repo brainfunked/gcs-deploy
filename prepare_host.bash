@@ -109,6 +109,7 @@ echo "[INFO] ## Setting up dnsmasq"
 
 cp host_setup/dnsmasq.conf /etc/dnsmasq.conf
 cp host_setup/dnsmasq-gcs.local /etc/dnsmasq.d/gcs.local
+dnsmasq --test &> /dev/null
 cat host_setup/hosts >> /etc/hosts
 systemctl enable dnsmasq.service
 systemctl restart dnsmasq.service
