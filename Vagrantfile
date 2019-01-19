@@ -1,8 +1,13 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-PROVISIONING_DIR_NAME = '/vm_provisioning/'
-PROVISIONING_DIR = Dir.pwd + PROVISIONING_DIR_NAME
+# IMPORTANT: It is assumed that this file is used from the git checkout
+# without modifying the directory structure. This isn't a good idea for
+# production setups, but this is a development setup, so..
+WORKING_DIR = Dir.pwd + '/'
+CONFIG_DIR = WORKING_DIR + 'conf/'
+PROVISIONING_DIR_NAME = 'vm_provisioning/'
+PROVISIONING_DIR = WORKING_DIR + PROVISIONING_DIR_NAME
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -26,15 +31,35 @@ Vagrant.configure("2") do |config|
       lv.nested = true
     end
 
+    # This is the network the cluster can be contacted over to run tests
+    # against. This network is just locally routed and not configured for DHCP.
+    # This is because vagrant-libvirt sets up the management network which sets
+    # up its own DHCP server and NAT. This DHCP server is unrestricted and
+    # conflicts with any other DHCP server on the system. Management network
+    # doesn't allow much configurability and basically didn't work at all when
+    # manually configured.
     master.vm.network "public_network",
-      dev: "vgrbr0",
+      dev: "gcsbr0",
       type: "bridge",
       mac: "52:54:00:a3:25:0a",
       ip: "192.168.150.11"
 
+    # Vagrant documentation isn't fully clear on what exactly is done when
+    # vagrant is set to manage the hostname. This option is thus better.
+    # /etc/hosts file is setup for all VMs with a common provisioner later.
     master.vm.provision "Set hostname", type: "shell", inline: <<-HOSTNAME
       hostnamectl set-hostname master
     HOSTNAME
+  end
+
+  # Add cluster hosts' IPs to /etc/hosts
+  config.vm.provision "Setup /etc/hosts", type: "shell" do |s|
+    hosts = File.read PROVISIONING_DIR + 'hosts'
+    s.inline = <<-HOSTS
+      echo "Writing cluster hosts to /etc/hosts."
+      echo -e "#{hosts}" >> /etc/hosts
+      echo "/etc/hosts updated."
+    HOSTS
   end
 
   # Enable provisioning with a shell script. Additional provisioners such as

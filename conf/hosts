@@ -1,0 +1,4 @@
+192.168.150.11 master.gcs.local gcs-master
+192.168.150.21 node1.gcs.local gcs-node1
+192.168.150.22 node1.gcs.local gcs-node2
+192.168.150.23 node1.gcs.local gcs-node3
