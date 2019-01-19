@@ -1,0 +1,7 @@
+listen-address=192.168.150.1
+domain=gcs.local,192.168.150.0/24,local
+#dhcp-range=vgrbr0,192.168.150.101,192.168.150.254
+#dhcp-host=52:54:00:a3:25:0a,master,192.168.150.11,2h
+#dhcp-host=52:54:00:94:be:0b,node1,192.168.150.21,2h
+#dhcp-host=52:54:00:37:8c:dd,node2,192.168.150.22,2h
+#dhcp-host=52:54:00:2d:f1:71,node3,192.168.150.23,2h
