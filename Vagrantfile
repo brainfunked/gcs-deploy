@@ -151,11 +151,11 @@ Vagrant.configure("2") do |config|
   # Copy over the scripts for deploying kubernetes
   config.vm.provision "Copy provisioning directory", type: "file",
     source: PROVISIONING_DIR,
-    destination: "$HOME/#{PROVISIONING_DIR_NAME}"
+    destination: "$HOME/"
 
   # The provisioners hereon are to be manually invoked after a `vagrant reload`
   config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
-    cd "/home/vagrant/#{PROVISIONING_DIR_NAME}"
+    pushd "$HOME/#{PROVISIONING_DIR_NAME}"
     ./install_kubeadm.bash
   KUBEADM
 end
