@@ -156,12 +156,8 @@ Vagrant.configure("2") do |config|
 
   # Change sysctl settings for flannel pod network
   # https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network
-  config.vm.provision "sysctl configuration for iptables", type: "file", \
-    source: "vm_provisioning/sysctl_flannel.conf", \
-    destination: "/etc/sysctl.d/99-flannel.conf"
-
-  # Apply sysctl settings and validate iptables setting for bridges
-  config.vm.provision "sysctl config", type: "shell", inline: <<-SYSCTL
+  config.vm.provision "sysctl configuration", type: "shell", inline: <<-SYSCTL
+    cp "/home/vagrant/#{PROVISIONING_DIR_NAME}sysctl_flannel.conf" /etc/sysctl.d/99-flannel.conf
     sysctl --system
     output=$(sysctl net.bridge.bridge-nf-call-iptables)
     echo "$output"
