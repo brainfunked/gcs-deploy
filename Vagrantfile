@@ -154,6 +154,26 @@ Vagrant.configure("2") do |config|
     source: PROVISIONING_DIR,
     destination: "$HOME/"
 
+  # Change sysctl settings for flannel pod network
+  # https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network
+  config.vm.provision "sysctl configuration for iptables", type: "file", \
+    source: "vm_provisioning/sysctl_flannel.conf", \
+    destination: "/etc/sysctl.d/99-flannel.conf"
+
+  # Apply sysctl settings and validate iptables setting for bridges
+  config.vm.provision "sysctl config", type: "shell", inline: <<-SYSCTL
+    sysctl --system
+    output=$(sysctl net.bridge.bridge-nf-call-iptables)
+    echo "$output"
+    if [[ $(echo ${output:(-1)}) == 1 ]];
+    then
+      exit 0
+    else
+      echo "sysctl setting 'net.bridge.bridge-nf-call-iptables' not set." >&2
+      exit 1
+    fi
+  SYSCTL
+
   # The provisioners hereon are to be manually invoked after a `vagrant reload`
   config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
     cp "/home/vagrant/#{PROVISIONING_DIR_NAME}install_kubeadm.bash" /usr/local/sbin
