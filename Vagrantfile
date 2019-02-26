@@ -6,11 +6,9 @@ require 'yaml'
 # IMPORTANT: It is assumed that this file is used from the git checkout
 # without modifying the directory structure. This isn't a good idea for
 # production setups, but this is a development setup, so..
-WORKING_DIR = Dir.pwd + '/'
-CONFIG_DIR = WORKING_DIR + 'conf/'
-PROVISIONING_DIR_NAME = 'vm_provisioning/'
-PROVISIONING_DIR = WORKING_DIR + PROVISIONING_DIR_NAME
-
+VAGRANT_DIR = '/vagrant/'
+CONFIG_DIR = VAGRANT_DIR + 'conf/'
+PROVISIONING_DIR = VAGRANT_DIR + 'vm_provisioning/'
 MAC_ADDRESSES = YAML.load_file(CONFIG_DIR + 'mac.yml')
 HOST_BRIDGE_DEV = "gcsbr0"
 
@@ -19,8 +17,9 @@ HOST_BRIDGE_DEV = "gcsbr0"
 # backwards compatibility). Please don't change it unless you know what
 # you're doing.
 Vagrant.configure("2") do |config|
-  config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.synced_folder ".", "/home/vagrant/sync", disabled: true
+  config.vm.synced_folder ".", "/vagrant", \
+    owner: "root", group: "root", \
+    mount_options: ["ro"]
   config.vm.box = "centos/7"
 
   # Disable automatic box update checking. If you disable this, then
@@ -148,16 +147,10 @@ Vagrant.configure("2") do |config|
     echo "Reboot to disable SELinux, getenforce = '$(getenforce)'."
   SELINUX
 
-  # Copy over the scripts for deploying kubernetes
-  # TODO: Use the synced folder instead
-  config.vm.provision "Copy provisioning directory", type: "file",
-    source: PROVISIONING_DIR,
-    destination: "$HOME/"
-
   # Change sysctl settings for flannel pod network
   # https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network
   config.vm.provision "sysctl configuration", type: "shell", inline: <<-SYSCTL
-    cp "/home/vagrant/#{PROVISIONING_DIR_NAME}sysctl_flannel.conf" /etc/sysctl.d/99-flannel.conf
+    cp "#{PROVISIONING_DIR}sysctl_flannel.conf" /etc/sysctl.d/99-flannel.conf
     sysctl --system
     output=$(sysctl net.bridge.bridge-nf-call-iptables)
     echo "$output"
@@ -172,7 +165,7 @@ Vagrant.configure("2") do |config|
 
   # The provisioners hereon are to be manually invoked after a `vagrant reload`
   config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
-    cp "/home/vagrant/#{PROVISIONING_DIR_NAME}install_kubeadm.bash" /usr/local/sbin
+    cp "#{PROVISIONING_DIR}install_kubeadm.bash" /usr/local/sbin
     chmod +x /usr/local/sbin/install_kubeadm.bash
     /usr/local/sbin/install_kubeadm.bash
   KUBEADM
