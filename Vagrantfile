@@ -10,6 +10,7 @@ WORKING_DIR = Dir.pwd + '/'
 VAGRANT_DIR = '/vagrant/'
 CONFIG_DIR = 'conf/'
 PROVISIONING_DIR = 'vm_provisioning/'
+SYNCED_PROVISIONING_DIR = VAGRANT_DIR + PROVISIONING_DIR
 MAC_ADDRESSES = YAML.load_file(CONFIG_DIR + 'mac.yml')
 HOST_BRIDGE_DEV = "gcsbr0"
 
@@ -20,7 +21,7 @@ HOST_BRIDGE_DEV = "gcsbr0"
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", \
     owner: "root", group: "root", \
-    mount_options: ["ro"]
+    mount_options: ["exec"]
   config.vm.box = "centos/7"
 
   # Disable automatic box update checking. If you disable this, then
@@ -150,24 +151,17 @@ Vagrant.configure("2") do |config|
 
   # Change sysctl settings for flannel pod network
   # https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network
-  config.vm.provision "sysctl configuration", type: "shell", inline: <<-SYSCTL
-    cp "#{VAGRANT_DIR + PROVISIONING_DIR}sysctl_flannel.conf" /etc/sysctl.d/99-flannel.conf
+  config.vm.provision "Install sysctl configuration", type: "shell", inline: <<-SYSCTL
+    cp "#{SYNCED_PROVISIONING_DIR}sysctl.d/*.conf" /etc/sysctl.d/
     sysctl --system
-    output=$(sysctl net.bridge.bridge-nf-call-iptables)
-    echo "$output"
-    if [[ $(echo ${output:(-1)}) == 1 ]];
-    then
-      exit 0
-    else
-      echo "sysctl setting 'net.bridge.bridge-nf-call-iptables' not set." >&2
-      exit 1
-    fi
   SYSCTL
 
   # The provisioners hereon are to be manually invoked after a `vagrant reload`
   config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
-    cp "#{VAGRANT_DIR + PROVISIONING_DIR}install_kubeadm.bash" /usr/local/sbin
-    chmod +x /usr/local/sbin/install_kubeadm.bash
-    /usr/local/sbin/install_kubeadm.bash
+    "#{SYNCED_PROVISIONING_DIR}install_kubeadm.bash"
   KUBEADM
+
+  config.vm.provision "k8s master setup", type: "shell", run: "never", inline: <<-K8S_MASTER
+    "#{SYNCED_PROVISIONING_DIR}k8s_setup/flannel_sysctl.bash"
+  K8S_MASTER
 end
