@@ -90,9 +90,7 @@ Vagrant.configure("2") do |config|
     HOSTS
   end
 
-  # Enable provisioning with a shell script. Additional provisioners such as
-  # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
-  # documentation for more information about their specific syntax and use.
+  # Setup SSH keys to allow the root user on the hypervisor to SSH in
   config.vm.provision "Configure SSH keys", type: "shell" do |s|
     ssh_pub_key_file = Dir.home + '/.ssh/id_rsa.pub'
     ssh_pub_key = ""
@@ -141,9 +139,17 @@ Vagrant.configure("2") do |config|
     SSH_KEY
   end
 
+  # Doing some system configuration here instead of during kubeadm
+  # installation, because this is executed before a `vagrant reload` that
+  # precedes the kubeadm installation.
+
+  # Disable swap since kubeadm asks for it
+  config.vm.provision "Disable swap", type: "shell", inline: <<-SWAPOFF
+    swapoff -a
+    sed -ri 's@^(/swapfile.*)$@#\1@' /etc/fstab
+  SWAPOFF
+
   # Disable SELinux since kubelet doesn't support SELinux yet.
-  # Doing it here instead of during kubeadm installation, because this is
-  # executed before a `vagrant reload` that precedes the kubeadm installation.
   config.vm.provision "Disable selinux", type: "shell", inline: <<-SELINUX
     echo "Disabling SELinux."
     setenforce 0
@@ -164,6 +170,8 @@ Vagrant.configure("2") do |config|
   KUBEADM
 
   config.vm.provision "k8s master setup", type: "shell", run: "never", inline: <<-K8S_MASTER
+    set -e
+
     #{SYNCED_PROVISIONING_DIR}k8s_setup/flannel_sysctl.bash
     kubeadm config images pull
 
