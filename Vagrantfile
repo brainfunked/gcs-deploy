@@ -11,7 +11,6 @@ VAGRANT_DIR = '/vagrant/'
 CONFIG_DIR = 'conf/'
 PROVISIONING_DIR = 'vm_provisioning/'
 SYNCED_PROVISIONING_DIR = VAGRANT_DIR + PROVISIONING_DIR
-SYNCED_PROVISIONING_DATA_DIR = SYNCED_PROVISIONING_DIR + 'run/'
 MAC_ADDRESSES = YAML.load_file(CONFIG_DIR + 'mac.yml')
 HOST_BRIDGE_DEV = "gcsbr0"
 
@@ -20,9 +19,7 @@ HOST_BRIDGE_DEV = "gcsbr0"
 # backwards compatibility). Please don't change it unless you know what
 # you're doing.
 Vagrant.configure("2") do |config|
-  config.vm.synced_folder ".", "/vagrant", \
-    owner: "root", group: "root", \
-    mount_options: ["exec"]
+  config.vm.synced_folder ".", "/vagrant", type: "rsync"
   config.vm.box = "centos/7"
 
   # Disable automatic box update checking. If you disable this, then
@@ -105,6 +102,7 @@ Vagrant.configure("2") do |config|
     end
 
     s.inline = <<-SSH_KEY
+      set -e
       if grep -sq #{ssh_pub_key} /home/vagrant/#{authorized_keys_file}; then
         echo "SSH key already provisioned for vagrant user."
       else
@@ -145,6 +143,7 @@ Vagrant.configure("2") do |config|
 
   # Disable swap since kubeadm asks for it
   config.vm.provision "Disable swap", type: "shell", inline: <<-SWAPOFF
+    set -e
     echo "Disabling swap."
     swapoff -a
     echo "Commenting out the swap entry from fstab."
@@ -153,6 +152,7 @@ Vagrant.configure("2") do |config|
 
   # Disable SELinux since kubelet doesn't support SELinux yet.
   config.vm.provision "Disable selinux", type: "shell", inline: <<-SELINUX
+    set -e
     echo "Disabling SELinux."
     setenforce 0
     sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config
@@ -162,6 +162,7 @@ Vagrant.configure("2") do |config|
   # Change sysctl settings for flannel pod network
   # https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network
   config.vm.provision "Install sysctl configuration", type: "shell", inline: <<-SYSCTL
+    set -e
     cp #{SYNCED_PROVISIONING_DIR}sysctl.d/*.conf /etc/sysctl.d/
     sysctl --system
   SYSCTL
@@ -171,28 +172,40 @@ Vagrant.configure("2") do |config|
     #{SYNCED_PROVISIONING_DIR}install_kubeadm.bash
   KUBEADM
 
-  config.vm.provision "k8s master setup", type: "shell", run: "never", inline: <<-K8S_MASTER
+  # This sets up the kubernetes master node using kubeadm. The `kubeadm join`
+  # command that is then needed to be invoked from the nodes is installed in
+  # /root/vagrant_logs/join_command. This needs to be copied onto the host
+  # running vagrant using:
+  # `vagrant ssh -c 'sudo cat /root/vagrant_logs/join_command' > vm_provisioning/k8s_setup/join_command`
+  # A `vagrant rsync` then would copy this file to all the nodes, after which
+  # the node setup provisioner can be run.
+  config.vm.provision "k8s master setup", type: "shell", run: "never", inline:
+  <<-K8S_MASTER
     set -e
 
     #{SYNCED_PROVISIONING_DIR}k8s_setup/flannel_sysctl.bash
     kubeadm config images pull
 
-    mkdir -pv #{SYNCED_PROVISIONING_DATA_DIR}
+    echo "Setting up the log directory"
+    log_dir=/root/vagrant_logs/
+    mkdir -pv $log_dir
+
     echo "Creating a kubernetes master using kubeadm."
     kubeadm init --pod-network-cidr=10.244.0.0/16 \
       --apiserver-advertise-address=192.168.150.11 2>&1 | \
-      tee "#{SYNCED_PROVISIONING_DATA_DIR}kubeadm_init_$(date +%Y%m%d_%H%M%S%Z)"
+      tee "${log_dir}kubeadm_init_$(date +%Y%m%d_%H%M%S%Z)"
+
+    echo "Setting up and storing token and ca cert hash for nodes to join."
+    kubeadm token create \
+      --description "Token for vagrant setup" \
+      --print-join-command > "${log_dir}join_command"
+
+    echo "Setting up configuration for kubectl."
+    mkdir -pv $HOME/.kube
+    cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 
     echo "Setting up flannel for pod networking."
     kubectl apply -f #{SYNCED_PROVISIONING_DIR}k8s_setup/kube-flannel.yml
     echo "Flannel pod network setup."
-
-    echo "Setting up and storing token and ca cert hash for nodes to join."
-    kubeadm token create > #{SYNCED_PROVISIONING_DATA_DIR}token
-    ( \
-      openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
-        openssl rsa -pubin -outform der 2>/dev/null | \
-        openssl dgst -sha256 -hex | sed 's/^.* //' \
-    ) > #{SYNCED_PROVISIONING_DATA_DIR}ca_cert_hash
   K8S_MASTER
 end
