@@ -145,7 +145,9 @@ Vagrant.configure("2") do |config|
 
   # Disable swap since kubeadm asks for it
   config.vm.provision "Disable swap", type: "shell", inline: <<-SWAPOFF
+    echo "Disabling swap."
     swapoff -a
+    echo "Commenting out the swap entry from fstab."
     sed -ri 's@^(/swapfile.*)$@#\1@' /etc/fstab
   SWAPOFF
 
