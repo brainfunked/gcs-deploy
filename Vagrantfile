@@ -51,7 +51,8 @@ Vagrant.configure("2") do |config|
     # Vagrant documentation isn't fully clear on what exactly is done when
     # vagrant is set to manage the hostname. This option is thus better.
     # /etc/hosts file is setup for all VMs with a common provisioner later.
-    master.vm.provision "Set master hostname", type: "shell", inline: <<-HOSTNAME
+    master.vm.provision "Set master hostname", type: "shell",
+    inline: <<-HOSTNAME
       hostnamectl set-hostname master
     HOSTNAME
   end
@@ -71,7 +72,8 @@ Vagrant.configure("2") do |config|
         mac:  MAC_ADDRESSES["node#{i}"],
         ip:   "192.168.150.2#{i}"
 
-      node.vm.provision "Set node#{i} hostname", type: "shell", inline: <<-HOSTNAME
+      node.vm.provision "Set node#{i} hostname", type: "shell",
+      inline: <<-HOSTNAME
         hostnamectl set-hostname node#{i}
       HOSTNAME
     end
@@ -161,7 +163,8 @@ Vagrant.configure("2") do |config|
 
   # Change sysctl settings for flannel pod network
   # https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network
-  config.vm.provision "Install sysctl configuration", type: "shell", inline: <<-SYSCTL
+  config.vm.provision "Install sysctl configuration", type: "shell",
+  inline: <<-SYSCTL
     set -e
     cp #{SYNCED_PROVISIONING_DIR}sysctl.d/*.conf /etc/sysctl.d/
     sysctl --system
@@ -177,7 +180,8 @@ Vagrant.configure("2") do |config|
   # these provisioners first on master, then on nodes once all of the master
   # setup is done. Start with:
   # `vagrant reload --provision-with "kubeadm installation","k8s master setup" master`
-  config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
+  config.vm.provision "kubeadm installation", type: "shell", run: "never",
+  inline: <<-KUBEADM
     #{SYNCED_PROVISIONING_DIR}install_kubeadm.bash
   KUBEADM
 
@@ -188,8 +192,8 @@ Vagrant.configure("2") do |config|
   # `vagrant ssh -c 'sudo cat /root/vagrant_logs/join_command' > vm_provisioning/k8s_setup/join_command`
   # A `vagrant rsync` then would copy this file to all the nodes, after which
   # the node setup provisioner can be run.
-  config.vm.provision "k8s master setup", type: "shell", run: "never", inline:
-  <<-K8S_MASTER
+  config.vm.provision "k8s master setup", type: "shell", run: "never",
+  inline: <<-K8S_MASTER
     set -e
 
     #{SYNCED_PROVISIONING_DIR}k8s_setup/flannel_sysctl.bash
@@ -224,8 +228,8 @@ Vagrant.configure("2") do |config|
   # will be synced to the nodes as part of the reload. Omit the "kubeadm
   # installation" provisioner if it had already been executed on the nodes
   # earlier.
-  config.vm.provision "k8s node setup", type: "shell", run: "never", inline:
-  <<-K8S_NODE
+  config.vm.provision "k8s node setup", type: "shell", run: "never",
+  inline: <<-K8S_NODE
     bash #{SYNCED_PROVISIONING_DIR}k8s_setup/join_command
   K8S_NODE
 end
