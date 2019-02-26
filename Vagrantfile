@@ -6,9 +6,10 @@ require 'yaml'
 # IMPORTANT: It is assumed that this file is used from the git checkout
 # without modifying the directory structure. This isn't a good idea for
 # production setups, but this is a development setup, so..
+WORKING_DIR = Dir.pwd + '/'
 VAGRANT_DIR = '/vagrant/'
-CONFIG_DIR = VAGRANT_DIR + 'conf/'
-PROVISIONING_DIR = VAGRANT_DIR + 'vm_provisioning/'
+CONFIG_DIR = 'conf/'
+PROVISIONING_DIR = 'vm_provisioning/'
 MAC_ADDRESSES = YAML.load_file(CONFIG_DIR + 'mac.yml')
 HOST_BRIDGE_DEV = "gcsbr0"
 
@@ -79,7 +80,7 @@ Vagrant.configure("2") do |config|
 
   # Add cluster hosts' IPs to /etc/hosts
   config.vm.provision "Setup /etc/hosts", type: "shell" do |s|
-    hosts = File.read PROVISIONING_DIR + 'hosts'
+    hosts = File.read WORKING_DIR + PROVISIONING_DIR + 'hosts'
     s.inline = <<-HOSTS
       echo "Writing cluster hosts to /etc/hosts."
       echo -e "#{hosts}" >> /etc/hosts
@@ -150,7 +151,7 @@ Vagrant.configure("2") do |config|
   # Change sysctl settings for flannel pod network
   # https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network
   config.vm.provision "sysctl configuration", type: "shell", inline: <<-SYSCTL
-    cp "#{PROVISIONING_DIR}sysctl_flannel.conf" /etc/sysctl.d/99-flannel.conf
+    cp "#{VAGRANT_DIR + PROVISIONING_DIR}sysctl_flannel.conf" /etc/sysctl.d/99-flannel.conf
     sysctl --system
     output=$(sysctl net.bridge.bridge-nf-call-iptables)
     echo "$output"
@@ -165,7 +166,7 @@ Vagrant.configure("2") do |config|
 
   # The provisioners hereon are to be manually invoked after a `vagrant reload`
   config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
-    cp "#{PROVISIONING_DIR}install_kubeadm.bash" /usr/local/sbin
+    cp "#{VAGRANT_DIR + PROVISIONING_DIR}install_kubeadm.bash" /usr/local/sbin
     chmod +x /usr/local/sbin/install_kubeadm.bash
     /usr/local/sbin/install_kubeadm.bash
   KUBEADM
