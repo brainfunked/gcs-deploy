@@ -167,7 +167,16 @@ Vagrant.configure("2") do |config|
     sysctl --system
   SYSCTL
 
-  # The provisioners hereon are to be manually invoked after a `vagrant reload`
+  # The provisioners hereon are to be manually invoked after a `vagrant
+  # reload`.
+  #
+  # IMPORTANT: Run the "k8s master setup" only on the master node and the "k8s
+  # node setup" only on the nodes.
+  #
+  # Given the requirement for reload, following is the most optimal way to run
+  # these provisioners first on master, then on nodes once all of the master
+  # setup is done. Start with:
+  # `vagrant reload --provision-with "kubeadm installation","k8s master setup" master`
   config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
     #{SYNCED_PROVISIONING_DIR}install_kubeadm.bash
   KUBEADM
@@ -208,4 +217,15 @@ Vagrant.configure("2") do |config|
     kubectl apply -f #{SYNCED_PROVISIONING_DIR}k8s_setup/kube-flannel.yml
     echo "Flannel pod network setup."
   K8S_MASTER
+
+  # This needs to be run on all the nodes via
+  # `vagrant reload --provision-with "kubeadm installation","k8s node setup" /node/`
+  # AFTER downloading the join_command into the synced folder. The join_command
+  # will be synced to the nodes as part of the reload. Omit the "kubeadm
+  # installation" provisioner if it had already been executed on the nodes
+  # earlier.
+  config.vm.provision "k8s node setup", type: "shell", run: "never", inline:
+  <<-K8S_NODE
+    bash #{SYNCED_PROVISIONING_DIR}k8s_setup/join_command
+  K8S_NODE
 end
