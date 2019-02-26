@@ -101,32 +101,33 @@ Vagrant.configure("2") do |config|
     if File.file? ssh_pub_key_file
       ssh_pub_key = File.readlines(ssh_pub_key_file).first.strip
     else
-      puts "No SSH key found."
+      STDERR.puts "No SSH public key found at #{ssh_pub_key_file}."
+      exit 1
     end
 
     s.inline = <<-SSH_KEY
-      if grep -sq "#{ssh_pub_key}" /home/vagrant/"#{authorized_keys_file}"; then
+      if grep -sq #{ssh_pub_key} /home/vagrant/#{authorized_keys_file}; then
         echo "SSH key already provisioned for vagrant user."
       else
         echo "Provisioning SSH key for vagrant user."
-        mkdir -p /home/vagrant/"#{ssh_dir}"
-        touch /home/vagrant/"#{authorized_keys_file}"
-        echo "#{ssh_pub_key}" >> /home/vagrant/"#{authorized_keys_file}"
-        chmod 644 /home/vagrant/"#{authorized_keys_file}"
-        chmod 700 /home/vagrant/"#{ssh_dir}"
-        chown -R vagrant:vagrant /home/vagrant/"${ssh_dir}"
+        mkdir -p /home/vagrant/#{ssh_dir}
+        touch /home/vagrant/#{authorized_keys_file}
+        echo #{ssh_pub_key} >> /home/vagrant/#{authorized_keys_file}
+        chmod 644 /home/vagrant/#{authorized_keys_file}
+        chmod 700 /home/vagrant/#{ssh_dir}
+        chown -R vagrant:vagrant /home/vagrant/${ssh_dir}
         echo "SSH key successfully provisioned for vagrant user."
       fi
-      if grep -sq "#{ssh_pub_key}" /root/"#{authorized_keys_file}"; then
+      if grep -sq #{ssh_pub_key} /root/#{authorized_keys_file}; then
         echo "SSH key already provisioned for root user."
       else
         echo "Provisioning SSH Key for root user."
-        mkdir -p /root/"#{ssh_dir}"
-        touch /root/"#{authorized_keys_file}"
-        echo "#{ssh_pub_key}" >> /root/"#{authorized_keys_file}"
-        chmod 644 /root/"#{authorized_keys_file}"
-        chmod 700 /root/"#{ssh_dir}"
-        chown -R root:root /root/"#{ssh_dir}"
+        mkdir -p /root/#{ssh_dir}
+        touch /root/#{authorized_keys_file}
+        echo #{ssh_pub_key} >> /root/#{authorized_keys_file}
+        chmod 644 /root/#{authorized_keys_file}
+        chmod 700 /root/#{ssh_dir}
+        chown -R root:root /root/#{ssh_dir}
       fi
       if grep -sqE '^PermitRootLogin[[:space:]]+yes' /etc/ssh/sshd_config; then
         echo "Root login over SSH already enabled."
@@ -152,16 +153,16 @@ Vagrant.configure("2") do |config|
   # Change sysctl settings for flannel pod network
   # https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#pod-network
   config.vm.provision "Install sysctl configuration", type: "shell", inline: <<-SYSCTL
-    cp "#{SYNCED_PROVISIONING_DIR}sysctl.d/*.conf" /etc/sysctl.d/
+    cp #{SYNCED_PROVISIONING_DIR}sysctl.d/*.conf /etc/sysctl.d/
     sysctl --system
   SYSCTL
 
   # The provisioners hereon are to be manually invoked after a `vagrant reload`
   config.vm.provision "kubeadm installation", type: "shell", run: "never", inline: <<-KUBEADM
-    "#{SYNCED_PROVISIONING_DIR}install_kubeadm.bash"
+    #{SYNCED_PROVISIONING_DIR}install_kubeadm.bash
   KUBEADM
 
   config.vm.provision "k8s master setup", type: "shell", run: "never", inline: <<-K8S_MASTER
-    "#{SYNCED_PROVISIONING_DIR}k8s_setup/flannel_sysctl.bash"
+    #{SYNCED_PROVISIONING_DIR}k8s_setup/flannel_sysctl.bash
   K8S_MASTER
 end
