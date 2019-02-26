@@ -11,6 +11,7 @@ VAGRANT_DIR = '/vagrant/'
 CONFIG_DIR = 'conf/'
 PROVISIONING_DIR = 'vm_provisioning/'
 SYNCED_PROVISIONING_DIR = VAGRANT_DIR + PROVISIONING_DIR
+SYNCED_PROVISIONING_DATA_DIR = SYNCED_PROVISIONING_DIR + 'run/'
 MAC_ADDRESSES = YAML.load_file(CONFIG_DIR + 'mac.yml')
 HOST_BRIDGE_DEV = "gcsbr0"
 
@@ -162,7 +163,25 @@ Vagrant.configure("2") do |config|
     #{SYNCED_PROVISIONING_DIR}install_kubeadm.bash
   KUBEADM
 
-  config.vm.provision "k8s master setup", type: "shell", run: "never", inline: <<-K8S_MASTER
+  config.vm.provision "k8s setup prereq", type: "shell", run: "never", inline: <<-K8S_PREREQ
     #{SYNCED_PROVISIONING_DIR}k8s_setup/flannel_sysctl.bash
+    kubeadm config images pull
+  K8S_PREREQ
+
+  config.vm.provision "k8s master setup", type: "shell", run: "never", inline: <<-K8S_MASTER
+    mkdir -pv #{SYNCED_PROVISIONING_DATA_DIR}
+    echo "Creating a kubernetes master using kubeadm."
+    kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.150.11 2>&1 | tee "#{SYNCED_PROVISIONING_DATA_DIR}kubeadm_init_$(date +%Y%m%d_%H%M%S%Z)"
+
+    echo "Setting up flannel for pod networking."
+    kubectl apply -f #{SYNCED_PROVISIONING_DIR}k8s_setup/kube-flannel.yaml
+    echo "Flannel pod network setup."
+
+    echo "Setting up and storing token and ca cert hash for nodes to join."
+    kubeadm token create > #{SYNCED_PROVISIONING_DATA_DIR}token
+    (\
+      openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | \
+        openssl dgst -sha256 -hex | sed 's/^.* //' \
+    ) > #{SYNCED_PROVISIONING_DATA_DIR}ca_cert_hash
   K8S_MASTER
 end
